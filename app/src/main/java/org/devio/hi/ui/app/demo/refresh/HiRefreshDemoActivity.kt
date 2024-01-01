@@ -25,17 +25,20 @@ class HiRefreshDemoActivity : AppCompatActivity() {
         val xOverView = HiTextOverView(this)
         val lottieOverView =
             HiLottieOverView(this)
-        refreshLayout.setRefreshOverView(lottieOverView)
+        refreshLayout.setRefreshOverView(xOverView)
+        refreshLayout.setEnableRefresh(true)
+        refreshLayout.setRefreshTime(2000L)
         refreshLayout.setRefreshListener(object :
             HiRefresh.HiRefreshListener {
-            override fun onRefresh() {
-                Handler().postDelayed({ refreshLayout.refreshFinished() }, 1000)
+            override fun onRefreshStart() {
+                HiLog.it("HiRefreshDemoActivity", "onRefreshStart")
             }
 
-            override fun enableRefresh(): Boolean {
-                return true
+            override fun onRefreshFinished() {
+                HiLog.it("HiRefreshDemoActivity", "onRefreshFinished")
             }
         })
+
         refreshLayout.setDisableRefreshScroll(false)
         initRecycleView()
     }

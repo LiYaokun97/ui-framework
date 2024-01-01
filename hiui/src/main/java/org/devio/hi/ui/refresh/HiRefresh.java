@@ -9,16 +9,15 @@ public interface HiRefresh {
     void setDisableRefreshScroll(boolean disableRefreshScroll);
 
     /**
-     * 刷新完成
-     */
-    void refreshFinished();
-
-    /**
      * 设置下拉刷新的监听器
      *
      * @param hiRefreshListener 刷新的监听器
      */
     void setRefreshListener(HiRefresh.HiRefreshListener hiRefreshListener);
+
+    void setRefreshTime(Long time);
+
+    void setEnableRefresh(boolean enableRefresh);
 
     /**
      * 设置下拉刷新的视图
@@ -29,8 +28,9 @@ public interface HiRefresh {
 
     interface HiRefreshListener {
 
-        void onRefresh();
+        void onRefreshStart();
 
-        boolean enableRefresh();
+        void onRefreshFinished();
+
     }
 }

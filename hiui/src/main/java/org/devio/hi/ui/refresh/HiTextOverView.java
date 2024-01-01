@@ -9,6 +9,7 @@ import android.view.animation.AnimationUtils;
 import android.view.animation.LinearInterpolator;
 import android.widget.TextView;
 
+import org.devio.hi.library.log.HiLog;
 import org.devio.hi.ui.R;
 
 public class HiTextOverView extends HiOverView {
@@ -34,23 +35,30 @@ public class HiTextOverView extends HiOverView {
         mRotateView = findViewById(R.id.iv_rotate);
     }
 
+    public static String TAG = "HiTextOverView";
+
     @Override
     protected void onScroll(int scrollY, int pullRefreshHeight) {
+        HiLog.it(TAG  , "onScroll");
+        mText.setText("onScroll");
     }
 
     @Override
     public void onVisible() {
-        mText.setText("下拉刷新");
+        HiLog.it(TAG  , "onVisible");
+        mText.setText("onVisible");
     }
 
     @Override
     public void onOver() {
-        mText.setText("松开刷新");
+        HiLog.it(TAG  , "onOver");
+        mText.setText("onOver");
     }
 
     @Override
     public void onRefresh() {
-        mText.setText("正在刷新...");
+        HiLog.it(TAG  , "onRefresh");
+        mText.setText("onRefresh...");
         Animation operatingAnim = AnimationUtils.loadAnimation(getContext(), R.anim.rotate_anim);
         LinearInterpolator lin = new LinearInterpolator();
         operatingAnim.setInterpolator(lin);
@@ -59,6 +67,8 @@ public class HiTextOverView extends HiOverView {
 
     @Override
     public void onFinish() {
+        HiLog.it(TAG  , "onFinish");
+        mText.setText("onFinish");
         mRotateView.clearAnimation();
     }
 
