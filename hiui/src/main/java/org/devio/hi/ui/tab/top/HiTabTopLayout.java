@@ -184,6 +184,10 @@ public class HiTabTopLayout extends HorizontalScrollView implements IHiTabLayout
         HiTabTop target = findTab(infoList.get(index));
         if (target == null) return 0;
         Rect rect = new Rect();
+        // getLocalVisibleRect实际上很奇怪，当空间的getVisibility()为GONE时，得到的rect实际上是以屏幕左上角作为坐标系的，
+        // 如果是VISIBLE，得到的rect是可见部分以当前控件左上角作为坐标系的
+        // 下面的代码写得不清晰，只是碰巧对了，不能根据它的逻辑来理解
+        // https://www.jianshu.com/p/30b0ae304518
         target.getLocalVisibleRect(rect);
         if (toRight) {//点击屏幕右侧
             if (rect.right > tabWith) {//right坐标大于控件的宽度时，说明完全没有显示

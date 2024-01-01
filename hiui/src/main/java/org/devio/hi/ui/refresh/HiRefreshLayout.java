@@ -63,7 +63,7 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
              //  bottom  =100 ,height 100
             recover(bottom);
         }
-        mState = HiRefreshState.STATE_INIT;
+        setRefreshState(HiRefreshState.STATE_INIT);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
                 return false;
             }
             //没有刷新或没有达到可以刷新的距离，且头部已经划出或下拉
-            if ((mState != HiRefreshState.STATE_REFRESH || head.getBottom() <= mHiOverView.mPullRefreshHeight) && (head.getBottom() > 0 || disY <= 0.0F)) {
+            if ((mState != HiRefreshState.STATE_REFRESH) && (head.getBottom() > 0 || disY <= 0.0F)) {
                 //还在滑动中
                 if (mState != HiRefreshState.STATE_OVER_RELEASE) {
                     int speed;
@@ -115,13 +115,15 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
                         speed = (int) (mLastY / mHiOverView.maxDamp);
                     }
                     //如果是正在刷新状态，则不允许在滑动的时候改变状态
-                    boolean bool = moveDown(speed, true);
+                    boolean bool = moveDown2(speed);
                     mLastY = (int) (-disY);
                     return bool;
                 } else {
+                    HiLog.it(TAG + " hiGestureDetector", "mState != HiRefreshState.STATE_OVER_RELEASE return false");
                     return false;
                 }
             } else {
+                HiLog.it(TAG + " hiGestureDetector", "return false");
                 return false;
             }
         }
@@ -135,10 +137,14 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
         }
 
         View head = getChildAt(0);
-        if (ev.getAction() == MotionEvent.ACTION_UP || ev.getAction() == MotionEvent.ACTION_CANCEL
-                || ev.getAction() == MotionEvent.ACTION_POINTER_INDEX_MASK) {//松开手
+        if (ev.getAction() == MotionEvent.ACTION_UP || ev.getAction() == MotionEvent.ACTION_CANCEL) {//松开手
+            // https://www.gcssloop.com/customview/multi-touch.html 多点触控教程
+            // https://www.bilibili.com/video/BV1d54y1d7y7/?p=1&spm_id_from=pageDriver 事件分发机制，有助于你理解cancel事件
+            HiLog.it(TAG + " dispatchTouchEvent", "release");
             if (head.getBottom() > 0) {
+                HiLog.it(TAG + " dispatchTouchEvent", "bottom > 0");
                 if (mState != HiRefreshState.STATE_REFRESH) {//非正在刷新
+                    HiLog.it(TAG + " dispatchTouchEvent", "recover");
                     recover(head.getBottom());
                     return false;
                 }
@@ -146,8 +152,9 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
             mLastY = 0;
         }
         boolean consumed = mGestureDetector.onTouchEvent(ev);
-        HiLog.i(TAG, "gesture consumed：" + consumed);
+        HiLog.it(TAG + " dispatchTouchEvent", "gesture consumed：" + consumed);
         if ((consumed || (mState != HiRefreshState.STATE_INIT && mState != HiRefreshState.STATE_REFRESH)) && head.getBottom() != 0) {
+            HiLog.it(TAG + " dispatchTouchEvent", "send cancel to parent");
             ev.setAction(MotionEvent.ACTION_CANCEL);//让父类接受不到真实的事件
             return super.dispatchTouchEvent(ev);
         }
@@ -190,9 +197,87 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
     private void recover(int dis) {//dis =200  200-100
         if (mHiRefreshListener != null && dis > mHiOverView.mPullRefreshHeight) {
             mAutoScroller.recover(dis - mHiOverView.mPullRefreshHeight);
-            mState = HiRefreshState.STATE_OVER_RELEASE;
+            setRefreshState(HiRefreshState.STATE_OVER_RELEASE);
         } else {
             mAutoScroller.recover(dis);
+        }
+    }
+
+    public void setRefreshState(HiRefreshState state) {
+        HiLog.it(TAG  + " setState", "setState from " + this.mState + " to "+ state);
+        this.mState = state;
+    }
+
+    /**
+     * 根据偏移量移动header与child
+     *
+     * @param offsetY 偏移量
+     * @return
+     */
+    // moveDown如果拆分成moveDown和moveUp，
+    // 会更好理解，moveDown是下拉的时候，moveUp是松手后回弹的时候
+    private boolean moveDown(int offsetY) {
+        HiLog.it(TAG + " moveDown", "offsetY:" + offsetY);
+        View head = getChildAt(0);
+        View child = getChildAt(1);
+        int childTop = child.getTop() + offsetY;
+
+        HiLog.it(TAG + " moveDown", "current state: " + mState);
+        HiLog.it(TAG + " moveDown", "mPullRefreshHeight: " + mHiOverView.mPullRefreshHeight);
+        HiLog.it(TAG + " moveDown", "moveDown head-bottom: " + head.getBottom() + ", child.getTop():" + child.getTop() + ", offsetY:" + offsetY);
+        if (childTop <= 0) {//异常情况的补充
+            HiLog.it(TAG  + " moveDown", "case 1");
+            offsetY = -child.getTop();
+            //移动head与child的位置，到原始位置
+            head.offsetTopAndBottom(offsetY);
+            child.offsetTopAndBottom(offsetY);
+            if (mState != HiRefreshState.STATE_REFRESH) {
+                setRefreshState(HiRefreshState.STATE_INIT);
+            }
+        } else if (mState == HiRefreshState.STATE_REFRESH && childTop > mHiOverView.mPullRefreshHeight) {
+            //如果正在下拉刷新中，禁止继续下拉
+            HiLog.it(TAG  + " moveDown", "case 2");
+            return false;
+        } else if (childTop <= mHiOverView.mPullRefreshHeight) {//还没超出设定的刷新距离
+            HiLog.it(TAG  + " moveDown", "case 3");
+            if (mHiOverView.getState() != HiRefreshState.STATE_VISIBLE) {//头部开始显示
+                mHiOverView.onVisible();
+                mHiOverView.setState(HiRefreshState.STATE_VISIBLE);
+                setRefreshState(HiRefreshState.STATE_VISIBLE);
+            }
+            head.offsetTopAndBottom(offsetY);
+            child.offsetTopAndBottom(offsetY);
+        } else {
+            HiLog.it(TAG  + " moveDown", "case 4");
+            if (mHiOverView.getState() != HiRefreshState.STATE_OVER) {
+                HiLog.it(TAG + " moveDown", "state over");
+                //超出刷新位置
+                mHiOverView.onOver();
+                mHiOverView.setState(HiRefreshState.STATE_OVER);
+            }
+            head.offsetTopAndBottom(offsetY);
+            child.offsetTopAndBottom(offsetY);
+        }
+        if (mHiOverView != null) {
+            mHiOverView.onScroll(head.getBottom(), mHiOverView.mPullRefreshHeight);
+        }
+        return true;
+    }
+
+
+    private void updateStateWhenDown(int childTop) {
+        if (childTop <= mHiOverView.mPullRefreshHeight) {
+            setRefreshState(HiRefreshState.STATE_VISIBLE);
+            if (mHiOverView.getState() != HiRefreshState.STATE_VISIBLE) {
+                mHiOverView.onVisible();
+                mHiOverView.setState(HiRefreshState.STATE_VISIBLE);
+            }
+        } else {
+            //超出刷新位置
+            if (mHiOverView.getState() != HiRefreshState.STATE_OVER) {
+                mHiOverView.onOver();
+                mHiOverView.setState(HiRefreshState.STATE_OVER);
+            }
         }
     }
 
@@ -200,46 +285,87 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
      * 根据偏移量移动header与child
      *
      * @param offsetY 偏移量
-     * @param nonAuto 是否非自动滚动触发
      * @return
      */
-    private boolean moveDown(int offsetY, boolean nonAuto) {
-        HiLog.i("111", "changeState:" + nonAuto);
+    // moveDown如果拆分成moveDown和moveUp，
+    // 会更好理解，moveDown是下拉的时候，moveUp是松手后回弹的时候
+    private boolean moveDown2(int offsetY) {
+        HiLog.it(TAG + " moveDown", "offsetY:" + offsetY);
         View head = getChildAt(0);
         View child = getChildAt(1);
         int childTop = child.getTop() + offsetY;
 
-        HiLog.i("-----", "moveDown head-bottom:" + head.getBottom() + ",child.getTop():" + child.getTop() + ",offsetY:" + offsetY);
+        HiLog.it(TAG + " moveDown", "current state: " + mState);
+        HiLog.it(TAG + " moveDown", "mPullRefreshHeight: " + mHiOverView.mPullRefreshHeight);
+        HiLog.it(TAG + " moveDown", "moveDown head-bottom: " + head.getBottom() + ", child.getTop():" + child.getTop() + ", offsetY:" + offsetY);
+
+        if (mState == null) {
+            setRefreshState(HiRefreshState.STATE_INIT);
+        }
+
+        switch (mState) {
+            case STATE_INIT:
+            case STATE_VISIBLE:
+                //移动head与child的位置，到原始位置
+                head.offsetTopAndBottom(offsetY);
+                child.offsetTopAndBottom(offsetY);
+                updateStateWhenDown(childTop);
+                break;
+
+            case STATE_REFRESH:
+                if(childTop > mHiOverView.mPullRefreshHeight) {
+                    return false;
+                }
+                break;
+
+            default:
+                HiLog.it(TAG + " moveDown", "default");
+                setRefreshState(HiRefreshState.STATE_INIT);
+                break;
+        }
+
+        if (mHiOverView != null) {
+            mHiOverView.onScroll(head.getBottom(), mHiOverView.mPullRefreshHeight);
+        }
+
+        return true;
+    }
+
+
+    /**
+     * 根据偏移量移动header与child
+     *
+     * @param offsetY 偏移量
+     * @return
+     */
+    private boolean moveUpWhenRelease(int offsetY) {
+        HiLog.it(TAG + " moveUpWhenRelease", "offsetY:" + offsetY);
+        View head = getChildAt(0);
+        View child = getChildAt(1);
+        int childTop = child.getTop() + offsetY;
+
+        HiLog.it(TAG + " moveUpWhenRelease", "current state: " + mState);
+        HiLog.it(TAG + " moveUpWhenRelease", "mPullRefreshHeight: " + mHiOverView.mPullRefreshHeight);
+        HiLog.it(TAG + " moveUpWhenRelease", "moveDown head-bottom: " + head.getBottom() + ", child.getTop():" + child.getTop() + ", offsetY:" + offsetY);
         if (childTop <= 0) {//异常情况的补充
-            HiLog.i(TAG, "childTop<=0,mState" + mState);
+            HiLog.it(TAG  + " moveUpWhenRelease", "case 1");
             offsetY = -child.getTop();
             //移动head与child的位置，到原始位置
             head.offsetTopAndBottom(offsetY);
             child.offsetTopAndBottom(offsetY);
             if (mState != HiRefreshState.STATE_REFRESH) {
-                mState = HiRefreshState.STATE_INIT;
+                setRefreshState(HiRefreshState.STATE_INIT);
             }
-        } else if (mState == HiRefreshState.STATE_REFRESH && childTop > mHiOverView.mPullRefreshHeight) {
-            //如果正在下拉刷新中，禁止继续下拉
-            return false;
         } else if (childTop <= mHiOverView.mPullRefreshHeight) {//还没超出设定的刷新距离
-            if (mHiOverView.getState() != HiRefreshState.STATE_VISIBLE && nonAuto) {//头部开始显示
-                mHiOverView.onVisible();
-                mHiOverView.setState(HiRefreshState.STATE_VISIBLE);
-                mState = HiRefreshState.STATE_VISIBLE;
-            }
+            HiLog.it(TAG  + " moveUpWhenRelease", "case 3");
             head.offsetTopAndBottom(offsetY);
             child.offsetTopAndBottom(offsetY);
             if (childTop == mHiOverView.mPullRefreshHeight && mState == HiRefreshState.STATE_OVER_RELEASE) {
-                HiLog.i(TAG, "refresh，childTop：" + childTop);
+                HiLog.it(TAG + " moveUpWhenRelease", "refresh，childTop：" + childTop);
                 refresh();
             }
         } else {
-            if (mHiOverView.getState() != HiRefreshState.STATE_OVER && nonAuto) {
-                //超出刷新位置
-                mHiOverView.onOver();
-                mHiOverView.setState(HiRefreshState.STATE_OVER);
-            }
+            HiLog.it(TAG  + " moveUpWhenRelease", "case 4");
             head.offsetTopAndBottom(offsetY);
             child.offsetTopAndBottom(offsetY);
         }
@@ -255,7 +381,7 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
      */
     private void refresh() {
         if (mHiRefreshListener != null) {
-            mState = HiRefreshState.STATE_REFRESH;
+            setRefreshState(HiRefreshState.STATE_REFRESH);
             mHiOverView.onRefresh();
             mHiOverView.setState(HiRefreshState.STATE_REFRESH);
             mHiRefreshListener.onRefresh();
@@ -280,7 +406,7 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
         @Override
         public void run() {
             if (mScroller.computeScrollOffset()) {//还未滚动完成
-                moveDown(mLastY - mScroller.getCurrY(), false);
+                moveUpWhenRelease(mLastY - mScroller.getCurrY());
                 mLastY = mScroller.getCurrY();
                 post(this);
             } else {
