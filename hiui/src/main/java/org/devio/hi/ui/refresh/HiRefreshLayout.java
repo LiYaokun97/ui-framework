@@ -129,15 +129,15 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
             if ((mState == null || mState == HiRefreshState.STATE_INIT || mState == HiRefreshState.STATE_VISIBLE)
                     && (head.getBottom() > 0 || disY <= 0.0F)) {
                 //还在滑动中
-                int speed;
+                int height;
                 //阻尼计算
                 if (child.getTop() < mHiOverView.mPullRefreshHeight) {
-                    speed = (int) (mLastY / mHiOverView.minDamp);
+                    height = (int) (mLastY / mHiOverView.minDamp);
                 } else {
-                    speed = (int) (mLastY / mHiOverView.maxDamp);
+                    height = (int) (mLastY / mHiOverView.maxDamp);
                 }
                 //如果是正在刷新状态，则不允许在滑动的时候改变状态
-                boolean bool = moveDown2(speed);
+                boolean bool = moveDown(height);
                 mLastY = (int) (-disY);
                 return bool;
             } else {
@@ -218,7 +218,6 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
             setRefreshState(HiRefreshState.STATE_OVER_RELEASE);
             // 恢复到刷新位置
 //            getHandler().postAtTime(() -> refreshFinished(), System.currentTimeMillis() + refreshTime);
-            postDelayed(()-> refreshFinished(), refreshTime);
         } else {
             refreshFinished();
         }
@@ -252,7 +251,7 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
      * @param offsetY 偏移量
      * @return
      */
-    private boolean moveDown2(int offsetY) {
+    private boolean moveDown(int offsetY) {
         HiLog.it(TAG + " moveDown", "offsetY:" + offsetY);
         View head = getChildAt(0);
         View child = getChildAt(1);
@@ -273,12 +272,6 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
                 head.offsetTopAndBottom(offsetY);
                 child.offsetTopAndBottom(offsetY);
                 updateStateWhenDown(childTop);
-                break;
-
-            case STATE_REFRESH:
-                if(childTop > mHiOverView.mPullRefreshHeight) {
-                    return false;
-                }
                 break;
 
             default:
@@ -350,6 +343,8 @@ public class HiRefreshLayout extends FrameLayout implements HiRefresh {
         if (mHiRefreshListener != null) {
             mHiRefreshListener.onRefreshStart();
         }
+
+        postDelayed(()-> refreshFinished(), refreshTime);
     }
 
 

@@ -25,9 +25,9 @@ class HiRefreshDemoActivity : AppCompatActivity() {
         val xOverView = HiTextOverView(this)
         val lottieOverView =
             HiLottieOverView(this)
-        refreshLayout.setRefreshOverView(xOverView)
+        refreshLayout.setRefreshOverView(lottieOverView)
         refreshLayout.setEnableRefresh(true)
-        refreshLayout.setRefreshTime(2000L)
+        refreshLayout.setRefreshTime(5000L)
         refreshLayout.setRefreshListener(object :
             HiRefresh.HiRefreshListener {
             override fun onRefreshStart() {
