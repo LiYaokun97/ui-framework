@@ -32,6 +32,7 @@ public class HiBannerAdapter extends PagerAdapter {
      */
     private boolean mLoop = false;
     private int mLayoutResId = -1;
+    private SparseArray<Object> mCachedViews;
 
     public HiBannerAdapter(@NonNull Context mContext) {
         this.mContext = mContext;
@@ -45,12 +46,12 @@ public class HiBannerAdapter extends PagerAdapter {
     }
 
     private void initCachedView() {
-//        mCachedViews = new SparseArray<>();
-//        for (int i = 0; i < models.size(); i++) {
-//            HiBannerViewHolder viewHolder = new HiBannerViewHolder(createView(LayoutInflater
-//            .from(mContext), null));
-//            mCachedViews.put(i, viewHolder);
-//        }
+        mCachedViews = new SparseArray<>();
+        for (int i = 0; i < models.size(); i++) {
+            HiBannerViewHolder viewHolder = new HiBannerViewHolder(createView(LayoutInflater
+                    .from(mContext), null));
+            mCachedViews.put(i, viewHolder);
+        }
     }
 
     public void setBindAdapter(IBindAdapter bindAdapter) {
@@ -111,8 +112,7 @@ public class HiBannerAdapter extends PagerAdapter {
         if (getRealCount() > 0) {
             realPosition = position % getRealCount();
         }
-        HiBannerViewHolder viewHolder = new HiBannerViewHolder(
-                createView(LayoutInflater.from(mContext), null));
+        HiBannerViewHolder viewHolder = getViewHolder(LayoutInflater.from(mContext), null, realPosition);
 //        if (container.equals(viewHolder.rootView.getParent())) {
 //            container.removeView(viewHolder.rootView);
 //        }
@@ -139,6 +139,20 @@ public class HiBannerAdapter extends PagerAdapter {
         }
 
         return layoutInflater.inflate(mLayoutResId, parent, false);
+    }
+
+    private HiBannerViewHolder getViewHolder(LayoutInflater layoutInflater, ViewGroup parent, int position) {
+        if (mLayoutResId == -1) {
+            throw new IllegalArgumentException("you must be set setLayoutResId first");
+        }
+
+        HiBannerViewHolder cachedView = (HiBannerViewHolder) mCachedViews.get(position);
+        if (cachedView != null) return cachedView;
+
+        HiBannerViewHolder hiBannerViewHolder = new HiBannerViewHolder(
+                createView(layoutInflater, parent));
+        mCachedViews.put(position, hiBannerViewHolder);
+        return hiBannerViewHolder;
     }
 
     protected void onBind(@NonNull final HiBannerViewHolder viewHolder, @NonNull final HiBannerMo bannerMo, final int position) {
