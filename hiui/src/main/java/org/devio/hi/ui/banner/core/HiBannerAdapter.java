@@ -24,7 +24,7 @@ public class HiBannerAdapter extends PagerAdapter {
     private IBindAdapter mBindAdapter;
     private List<? extends HiBannerMo> models;
     /**
-     * 是否开启自动轮
+     * 是否开启自动轮播
      */
     private boolean mAutoPlay = true;
     /**

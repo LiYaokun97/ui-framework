@@ -96,6 +96,8 @@ class HiCircleIndicator @JvmOverloads constructor(
                 imageView.setImageResource(mPointNormal)
             }
             imageView.requestLayout()
+        // 这里改成image.invalidate()也可以? 是的，可以，
+        // 其实这一行不写都行！
         }
     }
 }
