@@ -112,6 +112,7 @@ public class HiBannerAdapter extends PagerAdapter {
         if (getRealCount() > 0) {
             realPosition = position % getRealCount();
         }
+        // 这个地方可以加深理解，如果是new的话会频繁发生内存抖动的，可以加到文章里面去
         HiBannerViewHolder viewHolder = getViewHolder(LayoutInflater.from(mContext), null, realPosition);
 //        if (container.equals(viewHolder.rootView.getParent())) {
 //            container.removeView(viewHolder.rootView);
